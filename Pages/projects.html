@@ -1,0 +1,40 @@
+<!DOCTYPE html> 
+
+<html lang="en">
+    <head>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+        <!-- Google Fonts - Roboto Condensed -->
+        <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+        
+        <meta charset="UTF-8">
+        <title>Projects</title>
+
+        <link rel="stylesheet" href="../Styles/Styles.css">
+    </head>
+    
+    <main>
+        <body>
+            <p class="mainheader">Projects</p>
+            
+            <p class="skillsheader">Projects I have worked on:</p>
+
+            <div class="minesweeper-link-container">
+                <a href="Projects/minesweeper.html" class="link-button">Minesweeper</a>
+            </div>
+        </body>
+    </main>
+
+
+    <div id="footer"></div>
+
+    <script>
+    fetch('footer.html')
+        .then(res => res.text())
+        .then(html => {
+        document.getElementById('footer').innerHTML = html;
+        });
+    </script>
+</html>

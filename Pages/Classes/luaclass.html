@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+
+<html lang="en">
+    <head>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+        <!-- Google Fonts - Roboto Condensed -->
+        <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+        
+        <meta charset="UTF-8">
+        <title>OOP in Lua</title>
+
+        <link rel="stylesheet" href="../../Styles/Styles.css">
+    </head>
+    
+    <main>
+        <body>
+            <p class="mainheader">Object Oriented Programming in Lua</p>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">Lua does not support classes inhereintly but there are ways to replicate the feature of other 
+                    OOP programming languages. To replicate classes you will use the built in feature of 'setmetatable'
+                </p>                
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">This is an example of what a class would look like in lua
+                </p>                
+            </div>
+
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    local Goblin = {}
+                    Goblin.__index = Goblin
+
+
+                    --This is the classes Constructor 
+                    function Goblin.new(x,y,damage,health)
+                        --This creates an object (the class)
+                        local obj = setmetatable({},Goblin)
+                        
+                        --This is where you can set up the classes variables
+                        --adding the 'or 5' will create default values if the 
+                        --variable being passedthrough is nil.
+                        --Making them local will make these variables private 
+                        --to the rest of the system
+                        local damage = damage or 5 
+                        local health = health or 10
+
+                        --Variables declared straight to the object will be public
+                        obj.x = x or 0
+                        obj.y = y or 0
+                        obj.width = 20
+                        obj.height = 20
+
+                        --This is where you would define the getters/setters
+                        function obj:getDamage()
+                            return damage
+                        end
+
+                        function obj:setDamage(value)
+                            damage = value
+                        end
+
+                        function obj:getHealth()
+                            return health
+                        end
+                        
+                        function obj:setHealth(value)
+                            health = value
+                        end
+
+                        --This is where you return the obj 
+                        --It will retain everything that you did in this constructor
+                        --and will have all the functions associated with this class
+                        return obj
+                    end
+
+                    --Methods outside the constructor will be public variables
+
+
+                    --This will be the deconstructor
+                    function Goblin:die()
+                        print("Goblin Died")
+                        --You can tell the object is no longer alive to get rid of it
+                        --outside of the class
+                        self.isAlive = false
+                    end
+
+                    --This method will be on every instance of goblin
+                    --Using the ':' semicolon will allow you to use the 
+                    --keyword self as the objects variable
+                    function Goblin:takeDamage(damage)
+                        --Make sure damage in a positive number 
+                        if type(damage) == "number" or damage > 0 then
+                            --Using the self variable will only call the objects
+                            --method
+                            self:setHealth(self:getHealth() - damage)
+
+                            print("Goblin took damage")
+
+                            --Check to see if alive
+                            if self:getHealth() <= 0 then
+                                self:die()
+                            end
+                        end
+                    end
+
+                    function Goblin:attack()
+                        print("Goblin Attacked")
+                        return self:getDamage()
+                    end
+
+
+                    return Goblin
+                </code></pre>
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">Now that we have created a class, how do we make a child class? You can use Polymorphism in lua aswell
+                </p>                
+            </div>
+
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    local BigGoblin = {}
+                    BigGoblin.__index = BigGoblin
+
+                    --This is where you set the parent class
+                    setmetatable(BigGoblin,{__index = Goblin})
+
+
+                    --This will be the constructor for the child class
+                    function BigGoblin.new(x,y,damage,health)
+                        --This gets the parent class object
+                        --You pass through variables to the parent class
+                        --You can also use the 'or' in the constructor to add the default values
+                        local obj = Goblin.new(x,y,damage or 20,health or 30)
+
+                        --This is where you can change variables
+                        obj.width = 40
+                        obj.height = 40
+
+                        return setmetatable(obj,BigGoblin)
+                    end
+
+                    --If you want to write over the parents class method you can do so
+                    function BigGoblin:takeDamage(damage)
+                        --Make sure damage in a positive number 
+                        if type(damage) == "number" or damage > 0 then
+                            --Using the self variable will only call the objects
+                            --method
+                            self:setHealth(self:getHealth() - damage)
+
+                            print("Big Goblin took damage")
+
+                            --Check to see if alive
+                            if self:getHealth() <= 0 then
+                                self:die()
+                            end
+                        end
+                    end
+
+
+                    return BigGoblin
+                </code></pre>
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">In this example you will see how to use the goblin class by creating 
+                    an object and then using its methods and.
+                </p>                
+            </div>
+
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    Goblin = require("Classes.Goblin")
+                    BigGoblin = require("Classes.BigGoblin")
+
+                    --This is where you would get an object
+                    Bob = Goblin.new(100,100)
+                    BigBob = BigGoblin.new(60,100)
+
+                    --If we tell bob to attack BigBob we would do it like this
+                    --it will get the damage from Bob and put it into big bobs take damage call
+                    BigBob:takeDamage(Bob:getDamage())
+                    print("BigBob's health",BigBob:getHealth()) 
+
+                    --Now if bigbob attacks bob we would do it vise versa
+                    Bob:takeDamage(BigBob:getDamage())    
+
+                    --Now check if Bob is still alive
+                    if Bob.isAlive == false then
+                        Bob = nil
+                    end
+
+
+                </code></pre>
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">Output:
+                </p>                
+            </div>
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    Big Goblin took damage
+                    BigBob's health 25
+                    Goblin took damage
+                    Goblin Died
+                </code></pre>
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">While Lua doesn't have true inheritance/class systems it can be replicated in a way that allows for unique 
+                    features and very close to real class systems.
+                </p>                
+            </div>
+
+
+            <script>
+                document.querySelectorAll('pre code').forEach(block => {
+                const lines = block.textContent.split('\n');
+                const indent = lines
+                    .filter(line => line.trim() !== '')
+                    .reduce((min, line) => {
+                    const spaces = line.match(/^\s*/)[0].length;
+                    return Math.min(min, spaces);
+                    }, Infinity);
+                
+                block.textContent = lines
+                    .map(line => line.slice(indent))
+                    .join('\n')
+                    .trim();
+                });
+            </script>
+        </body>
+    </main>
+
+
+    <div id="footer"></div>
+
+    <script>
+    fetch('../footer.html')
+        .then(res => res.text())
+        .then(html => {
+        document.getElementById('footer').innerHTML = html;
+        });
+    </script>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+
+<html lang="en">
+    <head>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+        <!-- Google Fonts - Roboto Condensed -->
+        <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+        
+        <meta charset="UTF-8">
+        <title>OBD</title>
+
+        <link rel="stylesheet" href="../../Styles/Styles.css">
+    </head>
+    
+    <main>
+        <body>
+            <p class="mainheader">How I set up a OBD sensor to Python application</p>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">The goal of this project was to be able to hook up a OBD bluetooth sensor to my vehicle and have a rasberry pi that
+                    creates a local wifi in which a python server connects to that wifi using a port and collect data using the bluetooth capabilities of the
+                    rasberry pi to connect to the OBD sensor in which it waits for requests being sent from a Love2D server which will act as a the GUI, and the 
+                    python server will return data based on the request sent.
+                </p>                
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">This is the python server code
+                </p>                
+            </div>
+
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    import socket
+                    import json, threading
+                    import time
+                    from spotify_socket import handle_spotify,spotify_running
+                    from obd_socket import handle_obd,obd_running
+
+
+                    spotify_port    = 5005
+                    obd_port        = 5006
+                    ip              = "0.0.0.0"
+
+                    spotify_conn = None
+                    obd_conn     = None
+
+                    def spotify_client_send(data):
+                        global spotify_conn
+                        if spotify_conn:
+                            try:
+                                message = json.dumps(data) + "\n"
+                                spotify_conn.sendall(message.encode())
+                            except Exception as e:
+                                print("Failed to send to Spotify client:", e)
+                                spotify_conn = None  # Clean up dead connection
+
+                        
+                    def obd_client_send(data):  
+                        global obd_conn
+                        if obd_conn:
+                            try:
+                                message = json.dumps(data) + "\n"
+                                obd_conn.sendall(message.encode())
+                            except Exception as e:
+                                print("Failed to send to OBD client:", e)
+                                obd_conn = None  # Clean up dead connection
+
+                    def spotify_client():
+                        global spotify_conn
+                        #Start listening at designated ports
+                        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        server.bind((ip, spotify_port))
+                        server.listen()
+                        #Debug
+                        print(f"Server listening on port {spotify_port} {ip}")
+                        while True:
+                            conn, addr = server.accept()
+                            spotify_conn = conn
+                            threading.Thread(target=handle_spotify, args=(conn,), daemon=True).start()
+                        
+                    def obd_client():
+                        global obd_conn
+                        #Start listening at designated ports
+                        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        server.bind((ip, obd_port))
+                        server.listen()
+                        #debug
+                        print(f"Server listening on port {obd_port}")
+                        while True:
+                            conn, addr = server.accept()
+                            obd_conn = conn
+                            threading.Thread(target=handle_obd, args=(conn,), daemon=True).start()
+                        
+
+                    #Get two threads 
+                    threading.Thread(target=spotify_client,args=(),daemon=True).start()
+                    threading.Thread(target=obd_client, daemon=True).start()
+
+
+                    #Main loop
+                    while True:
+                        time.sleep(.5)
+                        spotify_running(spotify_client_send)
+                        obd_running(obd_client_send)
+                </code></pre>
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">This is the side code for the python OBD query system
+                </p>                
+            </div>
+
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    import obd
+                    import json
+
+
+                    connected = False
+
+
+                    #OBD connection
+                    def tryConnect():
+                        try:
+                            connection = obd.OBD("/dev/rfcomm0") 
+                            if connection: 
+                                connected = True
+                        except Exception as e:
+                            print(f"Failed to connect to OBD-II adapter: {e}")
+                            connection = None
+
+                        speed   = 0
+                        rpm     = 0
+                        
+                        
+                    #Attempt initial connection
+                    tryConnect()
+                        
+                    #call functions
+                    def get_speed():
+                        global speed
+                        if connection and connection.is_connected():
+                            response = connection.query(obd.commands.SPEED)
+                            if not response.is_null():
+                                speed = float(response.value.to("mph").magnitude)
+                            else:
+                                speed = 0
+
+                    # Query RPM from OBD
+                    def get_rpm():
+                        global rpm
+                        if connection and connection.is_connected():
+                            response = connection.query(obd.commands.RPM)
+                            if not response.is_null():
+                                rpm = float(response.value.magnitude)
+                            else:
+                                rpm = 0
+                        
+                        
+                    def handle_obd(conn):
+                        pass
+                        
+                        
+                    def obd_running(send):
+                        global speed,rpm
+                        
+                        #if connection is false try to connect to obd again
+                        if not connection:
+                            tryConnect()
+                        
+                        #get new speed data
+                        get_speed()
+                        
+                        #Format data in json 
+                        data = {
+                            "speed": speed,
+                            "rpm": rpm,
+                        }
+                        #send data
+                        send(data)
+                </code></pre>
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">Now that we have the code for the python server and connecting to the obd sensor we can now work
+                    on the GUI first we need the gui to recieve the data from the server. To do this we need to connect to the python 
+                    server
+                </p>                
+            </div>
+
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    --table that will hold are data
+                    local obd = {
+                        data 	= nil,
+                        speed	= 0,
+                        rpm 	= 0,
+                    }
+
+                    --Set up client side
+                    obd_client 		= socket.tcp()
+                    obd_client:settimeout(0)
+                    obd_client:connect(ip, obd_port)
+
+                    local buffer = ""
+
+                    --Send & Receive
+                    function obd:sendData(tbl)
+                        local message = json.encode(tbl) .. "\n"
+                        obd_client:send(message)
+                    end
+
+                    function obd:receiveData()
+                        local chunk, err, partial = obd_client:receive("*a")  -- read everything available
+                        if chunk or partial then
+                            buffer = buffer .. (chunk or partial)
+
+                            -- Handle complete lines
+                            while true do
+                                local line, rest = buffer:match("([^\n]*)\n(.*)")
+                                if not line then break end
+                                buffer = rest
+
+                                -- Parse JSON
+                                local data, pos, err = json.decode(line)
+                                if data then
+                                    latestData = data
+                                    -- print("Received from server:")
+                                    for k, v in pairs(data) do
+                                        -- print(k, v)
+                                        
+                                        --Commands
+                                        if k == "speed" then
+                                            self.speed = math.floor(tonumber(v))
+                                        elseif k == "rpm" then
+                                            self.rpm = v
+                                        end
+                                    end
+                                else
+                                    -- print("Failed to decode JSON:", line)
+                                end
+                            end
+                        end
+                    end
+
+
+                    --Commands
+
+                    function obd:getSpeed()
+                        data = {command = "speed",}
+                        self:sendData(data)
+                    end
+
+                    function obd:getRPM()
+                        data = {command = "rpm",}
+                        self:sendData(data)
+                    end
+
+
+                    return obd
+                </code></pre>
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">Now that we have are data stored in a table we can just draw it to the screen.
+                </p>                
+            </div>
+
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    local function obd_dashboard_draw()
+                        --Background
+                        local width,height = 300,400
+                        local x,y = 650,30
+                        love.graphics.setColor(.2,.2,.3,.8)
+                        love.graphics.rectangle("fill",x,y,width,height)
+                        --Border
+                        love.graphics.setColor(0,0,0,1)
+                        love.graphics.rectangle("line",x,y,width,height)
+
+
+                        love.graphics.setFont(amiri_64)
+                        love.graphics.setColor(1,1,1,1)
+                        love.graphics.print(obd.speed .. " mph",x+(width/2)-(75),y+32)
+                    end
+                </code></pre>
+            </div>
+
+
+            <script>
+                document.querySelectorAll('pre code').forEach(block => {
+                // Get the raw HTML and decode it to text first
+                const raw = block.innerHTML;
+                
+                // Decode HTML entities to get actual text
+                const decoded = raw
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>');
+
+                const lines = decoded.split('\n');
+                const indent = lines
+                    .filter(line => line.trim() !== '')
+                    .reduce((min, line) => {
+                        const spaces = line.match(/^\s*/)[0].length;
+                        return Math.min(min, spaces);
+                    }, Infinity);
+
+                const trimmed = lines
+                    .map(line => line.slice(indent))
+                    .join('\n')
+                    .trim();
+
+                // Re-encode so the browser displays as text, not HTML
+                block.textContent = trimmed;
+            });
+            </script>
+        </body>
+    </main>
+
+
+    <div id="footer"></div>
+
+    <script>
+    fetch('footer.html')
+        .then(res => res.text())
+        .then(html => {
+        document.getElementById('footer').innerHTML = html;
+        });
+    </script>
+</html>

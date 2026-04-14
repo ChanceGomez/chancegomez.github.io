@@ -1,0 +1,61 @@
+<!DOCTYPE html> 
+
+<html lang="en">
+    <head>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+        <!-- Google Fonts - Roboto Condensed -->
+        <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+        
+        <meta charset="UTF-8">
+        <title>Chance Francisco Gomez</title>
+
+        <link rel="stylesheet" href="Styles/Styles.css">
+    </head>
+
+    <main>
+        <body>
+            <p class="mainheader">Chance Francisco Gomez</p>
+            <p class="subheader">Software Engineer</p>
+
+            <p class="skillsheader">Skills: C++, C#, Java, JavaScript, HTML, CSS, Lua, Python</p>
+
+
+            <div class="link-container">
+                <a href="Pages/projects.html" class="link-button">Projects</a>
+            </div>
+
+            <div class="link-container">
+                <a href="Pages/Classes/c++class.html" class="link-button">C++ Class</a>
+            </div>
+
+            <div class="link-container">
+                <a href="Pages/Classes/csharpclass.html" class="link-button">C# Claass</a>
+            </div>
+
+            <div class="link-container">
+                <a href="Pages/Classes/luaclass.html" class="link-button">OOP in Lua</a>
+            </div>
+
+            <div class="link-container">
+                <a href="Pages/blazor.html" class="link-button">GUI in Blazor</a>
+            </div>
+
+            <div class="link-container">
+                <a href="Pages/obd.html" class="link-button">OBD sensor to Python to GUI</a>
+            </div>
+      </body>
+    </main>
+
+    <div id="footer"></div>
+
+    <script>
+    fetch('Pages/footer.html')
+        .then(res => res.text())
+        .then(html => {
+        document.getElementById('footer').innerHTML = html;
+        });
+    </script>
+</html>
