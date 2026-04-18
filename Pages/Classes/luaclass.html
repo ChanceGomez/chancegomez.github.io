@@ -12,7 +12,8 @@
         <meta charset="UTF-8">
         <title>OOP in Lua</title>
 
-        <link rel="stylesheet" href="../../Styles/Styles.css">
+        <link rel="stylesheet" href="/Styles/Styles.css">
+        <script src="/Scripts/codeblock.js" defer></script>
     </head>
     
     <main>
@@ -247,6 +248,7 @@
         .then(res => res.text())
         .then(html => {
         document.getElementById('footer').innerHTML = html;
+        formatCodeBlocks();
         });
     </script>
 </html>

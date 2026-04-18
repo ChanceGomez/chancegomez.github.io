@@ -12,7 +12,8 @@
         <meta charset="UTF-8">
         <title>OBD</title>
 
-        <link rel="stylesheet" href="../../Styles/Styles.css">
+        <link rel="stylesheet" href="/Styles/Styles.css">
+        <script src="/Scripts/codeblock.js" defer></script>
     </head>
     
     <main>
@@ -28,7 +29,7 @@
             </div>
 
             <div class="paragraphcontainer">
-                <p class="paragraph">This is the python server code
+                <p class="paragraph">This is the code for the python server
                 </p>                
             </div>
 
@@ -59,7 +60,7 @@
                                 spotify_conn = None  # Clean up dead connection
 
                         
-                    def obd_client_send(data):  
+                    def obd_client_send(data):
                         global obd_conn
                         if obd_conn:
                             try:
@@ -326,10 +327,11 @@
     <div id="footer"></div>
 
     <script>
-    fetch('footer.html')
+    fetch('../footer.html')
         .then(res => res.text())
         .then(html => {
         document.getElementById('footer').innerHTML = html;
+        formatCodeBlocks();
         });
     </script>
 </html>

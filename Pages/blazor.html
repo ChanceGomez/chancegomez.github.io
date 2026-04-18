@@ -12,7 +12,8 @@
         <meta charset="UTF-8">
         <title>Blazor GUI</title>
 
-        <link rel="stylesheet" href="../../Styles/Styles.css">
+        <link rel="stylesheet" href="/Styles/Styles.css">
+        <script src="/Scripts/codeblock.js" defer></script>
     </head>
     
     <main>
@@ -246,61 +247,372 @@
                 <p class="paragraph">Database persistence in blazor
                 </p>                
             </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">To gain object persistence in blazor you need the right packages these are the packages
+                    that you'll need
+                </p>                
+            </div>
+
             <div class="codecontainer">
                 <pre><code id="mycode">
-                    Big Goblin took damage
-                    BigBob's health 25
-                    Goblin took damage
-                    Goblin Died
+                    Microsoft.EntityFrameworkCore
+                    Microsoft.EntityFrameworkCore.SqlServer  (or .Sqlite if using SQLite)
+                    Microsoft.EntityFrameworkCore.Tools
+
+                    //Running these commands in the terminal will get you the packages
+                    dotnet add package Microsoft.EntityFrameworkCore.SqlServer
+                    dotnet add package Microsoft.EntityFrameworkCore.Tools
                 </code></pre>
             </div>
 
             <div class="paragraphcontainer">
-                <p class="paragraph">While Lua doesn't have true inheritance/class systems it can be replicated in a way that allows for unique 
-                    features and very close to real class systems.
+                <p class="paragraph">Next you need a class that contains the data's keys
+                </p>                
+            </div>
+            
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    namespace Common.Models;
+
+                    public class BalanceSheetLineItem
+                    {
+                        //Here are the keys that the data will have
+                        public int Id { get; set; }
+                        public string Name { get; set; } = string.Empty;
+                        public decimal Amount { get; set; }
+                        public bool IsAsset { get; set; }
+                    }
+                </code></pre>
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">Now you need a a calculation service
                 </p>                
             </div>
 
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    using Common.Models;
 
-            <script>
-                document.querySelectorAll('pre code').forEach(block => {
-                // Get the raw HTML and decode it to text first
-                const raw = block.innerHTML;
-                
-                // Decode HTML entities to get actual text
-                const decoded = raw
-                    .replace(/&amp;/g, '&')
-                    .replace(/&lt;/g, '<')
-                    .replace(/&gt;/g, '>');
+                    namespace Common.Services;
 
-                const lines = decoded.split('\n');
-                const indent = lines
-                    .filter(line => line.trim() !== '')
-                    .reduce((min, line) => {
-                        const spaces = line.match(/^\s*/)[0].length;
-                        return Math.min(min, spaces);
-                    }, Infinity);
+                    public interface IBalanceSheetService
+                    {
+                        decimal GetTotal(IEnumerable<BalanceSheetLineItem> items);
+                        decimal GetEquity(IEnumerable<BalanceSheetLineItem> assets, IEnumerable<BalanceSheetLineItem> liabilities);
+                    }
+                </code></pre>
+            </div>
 
-                const trimmed = lines
-                    .map(line => line.slice(indent))
-                    .join('\n')
-                    .trim();
+            <div class="paragraphcontainer">
+                <p class="paragraph">Now you need to make a DBContext
+                </p>                
+            </div>
 
-                // Re-encode so the browser displays as text, not HTML
-                block.textContent = trimmed;
-            });
-            </script>
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    public class AppDbContext : DbContext
+                    {
+                        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+                        // Here is where the class will be used to become a table in the database
+                        public DbSet<BalanceSheetLineItem> BalanceSheetLineItem { get; set; }
+                    }
+                </code></pre>
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">After hooking up the DBContext you need to create a repository which needs a class and a interface
+                </p>                
+            </div>
+
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    using Common.Models;
+
+                    public interface IDataService
+                    {
+                        Task<List<BalanceSheetLineItem>> GetBalanceSheetItemsAsync();
+                        Task AddBalanceSheetLineItemAsync(BalanceSheetLineItem item);
+                        Task DeleteBalanceSheetLineItemAsync(int id);
+                    }
+                </code></pre>
+            </div>
+
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    using Microsoft.EntityFrameworkCore;
+                    using Common.Data; // Your DbContext namespace
+                    using Common.Models;
+
+                    public class DatabaseDataService : IDataService
+                    {
+                        private readonly ApplicationDbContext _context;
+
+                        public DatabaseDataService(ApplicationDbContext context)
+                        {
+                            _context = context;
+                        }
+
+                        public async Task<List<BalanceSheetLineItem>> GetBalanceSheetItemsAsync()
+                        {
+                            return await _context.BalanceSheetLineItems.ToListAsync();
+                        }
+
+                        public async Task AddBalanceSheetLineItemAsync(BalanceSheetLineItem item)
+                        {
+                            _context.BalanceSheetLineItems.Add(item);
+                            await _context.SaveChangesAsync(); 
+                        }
+
+                        public async Task DeleteBalanceSheetLineItemAsync(int id)
+                        {
+                            var item = await _context.BalanceSheetLineItems.FindAsync(id);
+                            if (item != null)
+                            {
+                                _context.BalanceSheetLineItems.Remove(item);
+                                await _context.SaveChangesAsync();
+                            }
+                        }
+
+                        public async Task AddContactSubmissionAsync(ContactSubmission submission)
+                        {
+                            _context.ContactSubmissions.Add(submission);
+                            await _context.SaveChangesAsync();
+                        }
+
+                        public async Task<List<ContactSubmission>> GetContactSubmissionsAsync()
+                        {
+                            return await _context.ContactSubmissions.OrderByDescending(c => c.SubmittedAt).ToListAsync();
+                        }
+                    }
+                </code></pre>
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">Now with the infrastructure for the database set up we just need to add the Services
+                    to Proram.cs
+                </p>                
+            </div>
+
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    //add this to the Prorgam.cs
+                    builder.Services.AddScoped<IDataService, DatabaseDataService>();
+                </code></pre>
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">And the last step of adding the database is to do migrations which you run in the terminal
+                </p>                
+            </div>
+
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    dotnet ef migrations add InitialCreate
+                    dotnet ef database update
+                </code></pre>
+            </div>
+
+            <div class="paragraphcontainer">
+                <p class="paragraph">Now to implement it into a page you make a .razor file
+                </p>                
+            </div>
+
+            <div class="codecontainer">
+                <pre><code id="mycode">
+                    @page "/balance-sheet"
+                    @attribute [Authorize]
+                    @using EngulfDevour.Models
+                    @using EngulfDevour.Services
+                    @inject IDataService DataService
+                    @inject IBalanceSheetService BalanceSheetService
+                    @inject IJSRuntime JS
+                    @rendermode InteractiveServer
+                    @*
+                        BalanceSheetCalc.razor  
+                    *@
+
+                    <PageTitle>Balance Sheet Builder</PageTitle>
+
+                    <h2>Balance Sheet Builder</h2>
+                    <p class="text-muted">Engulf &amp; Devour — @DateTime.Today.ToString("MMMM d, yyyy")</p>
+
+                    <div class="row">
+
+                        <!-- Assets column -->
+                        <div class="col-md-6">
+                            <BalanceSheetList Title="Assets"
+                                            Items="assets"
+                                            Total="TotalAssets"
+                                            OnAddRequested="() => OpenDialog(isAsset: true)"
+                                            OnEditRequested="item => OpenEditDialog(item, isAsset: true)"
+                                            OnRemoveRequested="item => RemoveItem(item, isAsset: true)" />
+                        </div>
+
+                        <!-- Liabilities column -->
+                        <div class="col-md-6">
+                            <BalanceSheetList Title="Liabilities"
+                                            Items="liabilities"
+                                            Total="TotalLiabilities"
+                                            OnAddRequested="() => OpenDialog(isAsset: false)"
+                                            OnEditRequested="item => OpenEditDialog(item, isAsset: false)"
+                                            OnRemoveRequested="item => RemoveItem(item, isAsset: false)" />
+                        </div>
+
+                    </div>
+
+                    <hr />
+                    <h4>
+                        Equity (Assets − Liabilities):
+                        <span class="@(Equity >= 0 ? "text-success" : "text-danger")">
+                            @Equity.ToString("C2")
+                        </span>
+                    </h4>
+
+                    <div class="mt-3">
+                        <button class="btn btn-primary me-2" @onclick="ExportDocx">Export .docx</button>
+                        <label class="btn btn-outline-secondary">
+                            Upload .docx
+                            <InputFile OnChange="HandleDocxUpload" accept=".docx" style="display:none" />
+                        </label>
+                    </div>
+
+                    @if (uploadedFileName is not null)
+                    {
+                        <div class="alert alert-info mt-3">
+                            <strong>Uploaded:</strong> @uploadedFileName &nbsp;|&nbsp;
+                            <strong>At:</strong> @uploadedAt?.ToString("g")
+                        </div>
+                    }
+
+                    <!-- Single shared dialog — serves both assets and liabilities -->
+                    <BalanceSheetItemDialog IsVisible="showDialog"
+                                            EditingItem="editingItem"
+                                            SectionTitle="@dialogSection"
+                                            OnSave="HandleDialogSave"
+                                            OnCancel="HandleDialogCancel" />
+
+                    @code {
+                        // ── Master state (Database-backed) ────────────────────────────────────────
+
+                        private List<BalanceSheetLineItem> allItems = new();
+                        
+                        // These "computed" lists filter the master list into the two columns
+                        private List<BalanceSheetLineItem> assets => allItems.Where(x => x.IsAsset).ToList();
+                        private List<BalanceSheetLineItem> liabilities => allItems.Where(x => !x.IsAsset).ToList();
+
+                        // ── Dialog & UI state ─────────────────────────────────────────────────────
+
+                        private bool showDialog = false;
+                        private bool dialogIsAsset = true;
+                        private string dialogSection = "Asset";
+                        private BalanceSheetLineItem? editingItem = null;
+
+                        private string? uploadedFileName;
+                        private DateTime? uploadedAt;
+
+                        // ── Computed Totals
+
+                        private decimal TotalAssets => BalanceSheetService.GetTotal(assets);
+                        private decimal TotalLiabilities => BalanceSheetService.GetTotal(liabilities);
+                        private decimal Equity => BalanceSheetService.GetEquity(assets, liabilities);
+
+                        // ── Lifecycle & Database Refresh ──────────────────────────────────────────
+
+                        protected override async Task OnInitializedAsync()
+                        {
+                            await RefreshFromDatabase();
+                        }
+
+                        private async Task RefreshFromDatabase()
+                        {
+                            allItems = await DataService.GetBalanceSheetItemsAsync();
+                        }
+
+                        // ── Event Handlers ────────────────────────────────────────────────────────
+
+                        private void OpenDialog(bool isAsset)
+                        {
+                            dialogIsAsset = isAsset;
+                            dialogSection = isAsset ? "Asset" : "Liability";
+                            editingItem = new BalanceSheetLineItem { IsAsset = isAsset }; 
+                            showDialog = true;
+                        }
+
+                        private void OpenEditDialog(BalanceSheetLineItem item, bool isAsset)
+                        {
+                            dialogIsAsset = isAsset;
+                            dialogSection = isAsset ? "Asset" : "Liability";
+                            editingItem = item; 
+                            showDialog = true;
+                        }
+
+                        private async Task HandleDialogSave(BalanceSheetLineItem result)
+                        {
+                            result.IsAsset = dialogIsAsset;
+
+                            // If Id is 0, it's a brand new entry for the DB
+                            if (result.Id == 0)
+                            {
+                                await DataService.AddBalanceSheetLineItemAsync(result);
+                            }
+                            else 
+                            {
+
+                            }
+
+                            await RefreshFromDatabase();
+                            CloseDialog();
+                        }
+
+                        private async Task RemoveItem(BalanceSheetLineItem item, bool isAsset)
+                        {
+                            await DataService.DeleteBalanceSheetLineItemAsync(item.Id);
+                            await RefreshFromDatabase();
+                        }
+
+                        private void CloseDialog()
+                        {
+                            showDialog = false;
+                            editingItem = null;
+                        }
+
+                        private void HandleDialogCancel() => CloseDialog();
+
+                        // ── Export / Upload ──────────────────────────────────────────────────────
+
+                        private async Task ExportDocx()
+                        {
+                            var bytes = DocxBuilder.Build(assets, liabilities, TotalAssets, TotalLiabilities, Equity);
+                            var base64 = Convert.ToBase64String(bytes);
+                            await JS.InvokeVoidAsync("downloadFile", "balance-sheet.docx",
+                                "application/vnd.openxmlformats-officedocument.wordprocessingml.document", base64);
+                        }
+
+                        private void HandleDocxUpload(InputFileChangeEventArgs e)
+                        {
+                            uploadedFileName = e.File.Name;
+                            uploadedAt = DateTime.Now;
+                        }
+                    }
+                </code></pre>
+            </div>
         </body>
     </main>
 
 
     <div id="footer"></div>
 
+    
+    
     <script>
-    fetch('footer.html')
+    fetch('/pages/footer.html')
         .then(res => res.text())
         .then(html => {
         document.getElementById('footer').innerHTML = html;
+        formatCodeBlocks();
         });
     </script>
 </html>

@@ -12,7 +12,8 @@
         <meta charset="UTF-8">
         <title>C# Class</title>
 
-        <link rel="stylesheet" href="../../Styles/Styles.css">
+        <link rel="stylesheet" href="/Styles/Styles.css">
+        <script src="/Scripts/codeblock.js" defer></script>
     </head>
     
     <main>
@@ -163,35 +164,7 @@
                 </code></pre>
             </div>
 
-        
-            <script>
-                document.querySelectorAll('pre code').forEach(block => {
-                // Get the raw HTML and decode it to text first
-                const raw = block.innerHTML;
-                
-                // Decode HTML entities to get actual text
-                const decoded = raw
-                    .replace(/&amp;/g, '&')
-                    .replace(/&lt;/g, '<')
-                    .replace(/&gt;/g, '>');
-
-                const lines = decoded.split('\n');
-                const indent = lines
-                    .filter(line => line.trim() !== '')
-                    .reduce((min, line) => {
-                        const spaces = line.match(/^\s*/)[0].length;
-                        return Math.min(min, spaces);
-                    }, Infinity);
-
-                const trimmed = lines
-                    .map(line => line.slice(indent))
-                    .join('\n')
-                    .trim();
-
-                // Re-encode so the browser displays as text, not HTML
-                block.textContent = trimmed;
-            });
-            </script>
+    
         </body>
     </main>
 
@@ -203,6 +176,7 @@
         .then(res => res.text())
         .then(html => {
         document.getElementById('footer').innerHTML = html;
+        formatCodeBlocks();
         });
     </script>
 </html>
